@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { menuItems } from '../../config/menu'
+import { usePermissionStore } from '../../stores/permission'
 
 defineProps<{
   collapsed: boolean
 }>()
 
 const route = useRoute()
+const permissionStore = usePermissionStore()
 
 const activeMenu = computed(() => route.path)
+const menuItems = computed(() => permissionStore.getSidebarMenus())
 </script>
 
 <template>
@@ -26,14 +28,26 @@ const activeMenu = computed(() => route.path)
       router
       class="sidebar-menu"
     >
-      <el-menu-item
-        v-for="item in menuItems"
-        :key="item.path"
-        :index="item.path"
-      >
-        <el-icon><component :is="item.icon" /></el-icon>
-        <template #title>{{ item.title }}</template>
-      </el-menu-item>
+      <template v-for="item in menuItems" :key="item.id">
+        <el-sub-menu v-if="item.children?.length" :index="item.path">
+          <template #title>
+            <el-icon><component :is="item.icon" /></el-icon>
+            <span>{{ item.title }}</span>
+          </template>
+          <el-menu-item
+            v-for="child in item.children"
+            :key="child.id"
+            :index="child.path"
+          >
+            <el-icon><component :is="child.icon" /></el-icon>
+            <template #title>{{ child.title }}</template>
+          </el-menu-item>
+        </el-sub-menu>
+        <el-menu-item v-else :index="item.path">
+          <el-icon><component :is="item.icon" /></el-icon>
+          <template #title>{{ item.title }}</template>
+        </el-menu-item>
+      </template>
     </el-menu>
   </div>
 </template>

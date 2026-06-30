@@ -1,57 +1,74 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import axios from 'axios'
-import { User, Document, Setting } from '@element-plus/icons-vue'
+import { User, UserFilled, Menu as MenuIcon, TrendCharts } from '@element-plus/icons-vue'
+import { getDashboardStats } from '../../api/config'
+import type { DashboardStats } from '../../types/api'
+import { useAuthStore } from '../../stores/auth'
 
-const apiMessage = ref('')
-const apiLoading = ref(false)
-const apiError = ref('')
+const authStore = useAuthStore()
+const loading = ref(false)
+const stats = ref<DashboardStats>({
+  userCount: 0,
+  roleCount: 0,
+  menuCount: 0,
+  activeUsers: 0,
+  todayVisits: 0,
+})
 
 onMounted(async () => {
-  apiLoading.value = true
+  loading.value = true
   try {
-    const { data } = await axios.get<{ message: string }>('/api/test')
-    apiMessage.value = data.message
-  } catch {
-    apiError.value = '后端接口调用失败，请确认后端服务已启动'
+    const res = await getDashboardStats()
+    stats.value = res.data
   } finally {
-    apiLoading.value = false
+    loading.value = false
   }
 })
 </script>
 
 <template>
-  <div class="page">
+  <div v-loading="loading" class="page">
     <el-row :gutter="20">
-      <el-col :xs="24" :sm="12" :lg="8">
+      <el-col :xs="24" :sm="12" :lg="6">
         <el-card shadow="hover">
           <div class="stat-card">
             <el-icon :size="40" color="#409eff"><User /></el-icon>
             <div>
-              <div class="stat-card__value">1,280</div>
+              <div class="stat-card__value">{{ stats.userCount }}</div>
               <div class="stat-card__label">用户总数</div>
             </div>
           </div>
         </el-card>
       </el-col>
-      <el-col :xs="24" :sm="12" :lg="8">
+      <el-col :xs="24" :sm="12" :lg="6">
         <el-card shadow="hover">
           <div class="stat-card">
-            <el-icon :size="40" color="#67c23a"><Document /></el-icon>
+            <el-icon :size="40" color="#67c23a"><TrendCharts /></el-icon>
             <div>
-              <div class="stat-card__value">356</div>
+              <div class="stat-card__value">{{ stats.todayVisits }}</div>
               <div class="stat-card__label">今日访问</div>
             </div>
           </div>
         </el-card>
       </el-col>
-      <el-col :xs="24" :sm="12" :lg="8">
+      <el-col :xs="24" :sm="12" :lg="6">
         <el-card shadow="hover">
           <div class="stat-card">
-            <el-icon :size="40" color="#e6a23c"><Setting /></el-icon>
+            <el-icon :size="40" color="#e6a23c"><UserFilled /></el-icon>
             <div>
-              <div class="stat-card__value">12</div>
-              <div class="stat-card__label">待处理任务</div>
+              <div class="stat-card__value">{{ stats.activeUsers }}</div>
+              <div class="stat-card__label">活跃用户</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :sm="12" :lg="6">
+        <el-card shadow="hover">
+          <div class="stat-card">
+            <el-icon :size="40" color="#f56c6c"><MenuIcon /></el-icon>
+            <div>
+              <div class="stat-card__value">{{ stats.menuCount }}</div>
+              <div class="stat-card__label">菜单数量</div>
             </div>
           </div>
         </el-card>
@@ -60,32 +77,39 @@ onMounted(async () => {
 
     <el-card class="welcome-card" shadow="never">
       <template #header>
-        <span>欢迎使用后台管理系统</span>
+        <span>欢迎回来，{{ authStore.user?.nickname || authStore.user?.username }}</span>
       </template>
-      <p>左侧为导航菜单，顶部为工具栏，右侧为主内容区域。你可以在此基础上继续扩展业务页面。</p>
+      <p>
+        当前角色：<el-tag size="small">{{ authStore.user?.role?.name }}</el-tag>
+        。系统已启用 JWT 认证、RBAC 权限控制和动态路由，侧边栏菜单会根据你的权限自动展示。
+      </p>
     </el-card>
 
-    <el-card shadow="never">
-      <template #header>
-        <span>后端接口测试</span>
-      </template>
-      <div v-loading="apiLoading">
-        <el-alert
-          v-if="apiMessage"
-          type="success"
-          :title="apiMessage"
-          show-icon
-          :closable="false"
-        />
-        <el-alert
-          v-else-if="apiError"
-          type="error"
-          :title="apiError"
-          show-icon
-          :closable="false"
-        />
-      </div>
-    </el-card>
+    <el-row :gutter="20">
+      <el-col :xs="24" :md="12">
+        <el-card shadow="never">
+          <template #header><span>快捷入口</span></template>
+          <div class="quick-links">
+            <router-link to="/users">用户管理</router-link>
+            <router-link to="/roles">角色管理</router-link>
+            <router-link to="/menus">菜单管理</router-link>
+            <router-link to="/settings">系统设置</router-link>
+            <router-link to="/profile">个人中心</router-link>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :md="12">
+        <el-card shadow="never">
+          <template #header><span>系统概览</span></template>
+          <ul class="overview-list">
+            <li>角色数量：{{ stats.roleCount }}</li>
+            <li>权限模型：RBAC（基于角色的访问控制）</li>
+            <li>路由模式：后端菜单驱动动态路由</li>
+            <li>认证方式：JWT Bearer Token</li>
+          </ul>
+        </el-card>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
@@ -117,6 +141,28 @@ onMounted(async () => {
 .welcome-card p {
   margin: 0;
   line-height: 1.8;
+  color: #606266;
+}
+
+.quick-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.quick-links a {
+  padding: 8px 16px;
+  color: #409eff;
+  text-decoration: none;
+  background: #ecf5ff;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.overview-list {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 2;
   color: #606266;
 }
 </style>

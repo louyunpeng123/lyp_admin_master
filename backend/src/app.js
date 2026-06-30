@@ -1,26 +1,45 @@
 const express = require('express');
 const cors = require('cors');
-const mongoose = require('mongoose');
+const connectDB = require('./config/db');
+const { seed } = require('./utils/seed');
 require('dotenv').config();
+
+const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/users');
+const roleRoutes = require('./routes/roles');
+const menuRoutes = require('./routes/menus');
+const configRoutes = require('./routes/config');
+const dashboardRoutes = require('./routes/dashboard');
 
 const app = express();
 
-// 中间件
 app.use(cors());
 app.use(express.json());
 
-// 数据库连接
-// mongoose.connect(process.env.MONGO_URI)
-// .then(() => { console.log('MongoDB已连接'); })
-// .catch((err) => { console.log('MongoDB连接失败', err); });
-
-// 测试接口
-app.get('/api/test', (req, res) => {
-    res.json({ message: 'API测试成功111' });
+app.get('/api/test', (_req, res) => {
+  res.json({ message: 'API 运行正常' });
 });
 
-// 启动服务
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/roles', roleRoutes);
+app.use('/api/menus', menuRoutes);
+app.use('/api/config', configRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+
+async function start() {
+  try {
+    await connectDB();
+    await seed();
+  } catch (err) {
+    console.error('启动失败:', err.message);
+    process.exit(1);
+  }
+
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
-});
+  });
+}
+
+start();
