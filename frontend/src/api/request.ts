@@ -31,15 +31,17 @@ request.interceptors.response.use(
   (error) => {
     const status = error.response?.status
     const message = error.response?.data?.message || error.message || '网络错误'
+    const url = error.config?.url || ''
+    const isAuthRequest = /\/auth\/(login|register)$/.test(url)
 
-    if (status === 401) {
+    if (status === 401 && !isAuthRequest) {
       localStorage.removeItem(TOKEN_KEY)
       if (router.currentRoute.value.path !== '/login') {
         router.push({ path: '/login', query: { redirect: router.currentRoute.value.fullPath } })
       }
-    } else {
-      ElMessage.error(message)
     }
+
+    ElMessage.error(message)
     return Promise.reject(error)
   }
 )

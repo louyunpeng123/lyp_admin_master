@@ -13,6 +13,7 @@ const ALL_PERMISSIONS = [
   'menu:write',
   'settings:read',
   'settings:write',
+  'log:read',
 ];
 
 const DEFAULT_MENUS = [
@@ -62,6 +63,15 @@ const DEFAULT_MENUS = [
     permission: 'settings:read',
   },
   {
+    title: '操作日志',
+    path: '/logs',
+    name: 'Logs',
+    component: 'log/index.vue',
+    icon: 'Document',
+    sort: 6,
+    permission: 'log:read',
+  },
+  {
     title: '个人中心',
     path: '/profile',
     name: 'Profile',
@@ -90,6 +100,12 @@ async function seed() {
       permissions: ALL_PERMISSIONS,
       isSystem: true,
     });
+  } else {
+    const merged = [...new Set([...adminRole.permissions, ...ALL_PERMISSIONS])];
+    if (merged.length !== adminRole.permissions.length) {
+      adminRole.permissions = merged;
+      await adminRole.save();
+    }
   }
 
   if (!(await Role.findOne({ code: 'editor' }))) {

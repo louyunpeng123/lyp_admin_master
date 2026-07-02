@@ -80,6 +80,9 @@ export const usePermissionStore = defineStore('permission', () => {
         router.removeRoute(name)
       }
     }
+    if (router.hasRoute('NotFound')) {
+      router.removeRoute('NotFound')
+    }
     addedRouteNames.value = []
     routesAdded.value = false
   }

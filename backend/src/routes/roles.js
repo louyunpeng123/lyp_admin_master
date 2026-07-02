@@ -2,6 +2,7 @@ const express = require('express');
 const Role = require('../models/Role');
 const { auth, checkPermission } = require('../middleware/auth');
 const { success, fail } = require('../utils/response');
+const { createLog } = require('../utils/auditLog');
 const { ALL_PERMISSIONS } = require('../utils/seed');
 
 const router = express.Router();
@@ -39,6 +40,13 @@ router.post('/', auth, checkPermission('role:write'), async (req, res) => {
   }
 
   const role = await Role.create({ name, code, description, permissions: permissions || [] });
+  await createLog(req, {
+    module: 'role',
+    action: 'create',
+    targetId: role._id,
+    targetName: role.name,
+    detail: { after: formatRole(role) },
+  });
   success(res, formatRole(role), '角色创建成功');
 });
 
@@ -48,12 +56,20 @@ router.put('/:id', auth, checkPermission('role:write'), async (req, res) => {
     return fail(res, '角色不存在', 404, 404);
   }
 
+  const before = formatRole(role);
   const { name, description, permissions } = req.body;
   if (name) role.name = name;
   if (description !== undefined) role.description = description;
   if (permissions) role.permissions = permissions;
 
   await role.save();
+  await createLog(req, {
+    module: 'role',
+    action: 'update',
+    targetId: role._id,
+    targetName: role.name,
+    detail: { before, after: formatRole(role) },
+  });
   success(res, formatRole(role), '角色更新成功');
 });
 
@@ -63,10 +79,24 @@ router.delete('/:id', auth, checkPermission('role:write'), async (req, res) => {
     return fail(res, '角色不存在', 404, 404);
   }
   if (role.isSystem) {
+    await createLog(req, {
+      module: 'role',
+      action: 'delete',
+      targetId: role._id,
+      targetName: role.name,
+      status: 'fail',
+      detail: '系统内置角色不可删除',
+    });
     return fail(res, '系统内置角色不可删除');
   }
 
   await role.deleteOne();
+  await createLog(req, {
+    module: 'role',
+    action: 'delete',
+    targetId: role._id,
+    targetName: role.name,
+  });
   success(res, null, '角色已删除');
 });
 

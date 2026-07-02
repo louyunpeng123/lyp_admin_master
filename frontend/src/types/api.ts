@@ -74,7 +74,18 @@ export interface DashboardStats {
   roleCount: number
   menuCount: number
   activeUsers: number
-  todayVisits: number
+  operationLogCount: number
+  todayOperations: number
+  todayLoginFails: number
+  recentLogs: {
+    id: string
+    operatorName: string
+    module: string
+    action: string
+    targetName: string
+    status: 'success' | 'fail'
+    createdAt: string
+  }[]
 }
 
 export interface SystemConfig {
@@ -82,4 +93,20 @@ export interface SystemConfig {
   adminEmail: string
   enableNotify: boolean
   allowRegister: boolean
+}
+
+export interface OperationLogItem {
+  id: string
+  operatorId: string
+  operatorName: string
+  module: 'auth' | 'user' | 'role' | 'menu' | 'config'
+  action: 'login' | 'create' | 'update' | 'delete'
+  targetId: string
+  targetName: string
+  method: string
+  path: string
+  ip: string
+  status: 'success' | 'fail'
+  detail: unknown
+  createdAt: string
 }

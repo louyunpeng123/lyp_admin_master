@@ -4,6 +4,8 @@ import { getToken } from '../api/request'
 import { useAuthStore } from '../stores/auth'
 import { usePermissionStore } from '../stores/permission'
 
+export const NOT_FOUND_ROUTE_NAME = 'NotFound'
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -20,16 +22,21 @@ const router = createRouter({
       redirect: '/dashboard',
       children: [],
     },
-    {
-      path: '/:pathMatch(.*)*',
-      name: 'NotFound',
-      component: () => import('../views/error/404.vue'),
-      meta: { title: '页面不存在', public: true },
-    },
   ],
 })
 
 let routeReady = false
+
+function addNotFoundRoute() {
+  if (router.hasRoute(NOT_FOUND_ROUTE_NAME)) return
+
+  router.addRoute({
+    path: '/:pathMatch(.*)*',
+    name: NOT_FOUND_ROUTE_NAME,
+    component: () => import('../views/error/404.vue'),
+    meta: { title: '页面不存在' },
+  })
+}
 
 export async function setupDynamicRoutes() {
   const permissionStore = usePermissionStore()
@@ -42,6 +49,7 @@ export async function setupDynamicRoutes() {
     router.addRoute('Layout', route)
   }
 
+  addNotFoundRoute()
   permissionStore.routesAdded = true
   routeReady = true
 }
@@ -49,8 +57,8 @@ export async function setupDynamicRoutes() {
 router.beforeEach(async (to, _from, next) => {
   document.title = `${to.meta.title || '后台管理系统'}`
 
-  if (to.meta.public) {
-    if (to.path === '/login' && getToken()) {
+  if (to.path === '/login') {
+    if (getToken()) {
       next('/dashboard')
       return
     }

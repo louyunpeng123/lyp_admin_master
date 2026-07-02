@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Role = require('../models/Role');
 const { auth, checkPermission } = require('../middleware/auth');
 const { success, fail } = require('../utils/response');
+const { createLog } = require('../utils/auditLog');
 
 const router = express.Router();
 
@@ -73,6 +74,13 @@ router.post('/', auth, checkPermission('user:write'), async (req, res) => {
     status: status || 'active',
   });
   await user.populate('role');
+  await createLog(req, {
+    module: 'user',
+    action: 'create',
+    targetId: user._id,
+    targetName: user.username,
+    detail: { after: formatUser(user) },
+  });
   success(res, formatUser(user), '用户创建成功');
 });
 
@@ -82,6 +90,8 @@ router.put('/:id', auth, checkPermission('user:write'), async (req, res) => {
   if (!user) {
     return fail(res, '用户不存在', 404, 404);
   }
+
+  const before = formatUser(await user.populate('role'));
 
   if (email && email !== user.email) {
     const emailTaken = await User.findOne({ email, _id: { $ne: user._id } });
@@ -98,11 +108,25 @@ router.put('/:id', auth, checkPermission('user:write'), async (req, res) => {
 
   await user.save();
   await user.populate('role');
+  await createLog(req, {
+    module: 'user',
+    action: 'update',
+    targetId: user._id,
+    targetName: user.username,
+    detail: { before, after: formatUser(user) },
+  });
   success(res, formatUser(user), '用户更新成功');
 });
 
 router.delete('/:id', auth, checkPermission('user:write'), async (req, res) => {
   if (req.params.id === String(req.user._id)) {
+    await createLog(req, {
+      module: 'user',
+      action: 'delete',
+      targetId: req.params.id,
+      status: 'fail',
+      detail: '不能删除当前登录用户',
+    });
     return fail(res, '不能删除当前登录用户');
   }
 
@@ -110,6 +134,12 @@ router.delete('/:id', auth, checkPermission('user:write'), async (req, res) => {
   if (!user) {
     return fail(res, '用户不存在', 404, 404);
   }
+  await createLog(req, {
+    module: 'user',
+    action: 'delete',
+    targetId: user._id,
+    targetName: user.username,
+  });
   success(res, null, '用户已删除');
 });
 
@@ -119,14 +149,33 @@ router.patch('/:id/status', auth, checkPermission('user:write'), async (req, res
     return fail(res, '无效的状态值');
   }
   if (req.params.id === String(req.user._id)) {
+    await createLog(req, {
+      module: 'user',
+      action: 'update',
+      targetId: req.params.id,
+      status: 'fail',
+      detail: '不能禁用当前登录用户',
+    });
     return fail(res, '不能禁用当前登录用户');
   }
 
-  const user = await User.findByIdAndUpdate(req.params.id, { status }, { new: true }).populate('role');
-  if (!user) {
+  const existing = await User.findById(req.params.id).populate('role');
+  if (!existing) {
     return fail(res, '用户不存在', 404, 404);
   }
-  success(res, formatUser(user), status === 'active' ? '已启用' : '已禁用');
+
+  const before = formatUser(existing);
+  existing.status = status;
+  await existing.save();
+
+  await createLog(req, {
+    module: 'user',
+    action: 'update',
+    targetId: existing._id,
+    targetName: existing.username,
+    detail: { before, after: formatUser(existing) },
+  });
+  success(res, formatUser(existing), status === 'active' ? '已启用' : '已禁用');
 });
 
 module.exports = router;

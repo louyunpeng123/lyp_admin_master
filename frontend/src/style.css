@@ -24,4 +24,31 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  color: #303133;
+  background-color: #f0f2f5;
+}
+
+/* 侧边栏折叠后的弹出菜单 */
+.el-menu--popup {
+  --el-menu-bg-color: #001529;
+  --el-menu-text-color: rgba(255, 255, 255, 0.75);
+  --el-menu-hover-text-color: #ffffff;
+  --el-menu-active-color: #ffffff;
+  --el-menu-hover-bg-color: rgba(255, 255, 255, 0.08);
+  background-color: #001529;
+  border: none;
+}
+
+.el-menu--popup .el-menu-item {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.el-menu--popup .el-menu-item:hover,
+.el-menu--popup .el-menu-item.is-active {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.el-menu--popup .el-menu-item.is-active {
+  background-color: #1677ff;
 }

@@ -35,6 +35,7 @@ const permissionOptions = [
   { label: '管理菜单', value: 'menu:write' },
   { label: '查看设置', value: 'settings:read' },
   { label: '修改设置', value: 'settings:write' },
+  { label: '查看操作日志', value: 'log:read' },
 ]
 
 function canWrite() {

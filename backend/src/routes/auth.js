@@ -5,6 +5,7 @@ const Role = require('../models/Role');
 const Config = require('../models/Config');
 const { auth } = require('../middleware/auth');
 const { success, fail } = require('../utils/response');
+const { createLog } = require('../utils/auditLog');
 
 const router = express.Router();
 
@@ -75,6 +76,15 @@ router.post('/register', async (req, res) => {
 
   await user.populate('role');
   const token = signToken(user._id);
+  await createLog(req, {
+    module: 'auth',
+    action: 'create',
+    operatorId: user._id,
+    operatorName: user.username,
+    targetId: user._id,
+    targetName: user.username,
+    detail: { after: formatUser(user) },
+  });
   success(res, { token, user: formatUser(user) }, '注册成功');
 });
 
@@ -86,9 +96,28 @@ router.post('/login', async (req, res) => {
 
   const user = await User.findOne({ username }).select('+password').populate('role');
   if (!user || !(await user.comparePassword(password))) {
+    await createLog(req, {
+      module: 'auth',
+      action: 'login',
+      operatorId: user?._id,
+      operatorName: user?.username || username,
+      targetName: username,
+      status: 'fail',
+      detail: user ? '密码错误' : '用户不存在',
+    });
     return fail(res, '用户名或密码错误', 401, 401);
   }
   if (user.status !== 'active') {
+    await createLog(req, {
+      module: 'auth',
+      action: 'login',
+      operatorId: user._id,
+      operatorName: user.username,
+      targetId: user._id,
+      targetName: user.username,
+      status: 'fail',
+      detail: '账号已被禁用',
+    });
     return fail(res, '账号已被禁用', 403, 403);
   }
 
@@ -97,6 +126,14 @@ router.post('/login', async (req, res) => {
   await user.save();
 
   const token = signToken(user._id);
+  await createLog(req, {
+    module: 'auth',
+    action: 'login',
+    operatorId: user._id,
+    operatorName: user.username,
+    targetId: user._id,
+    targetName: user.username,
+  });
   success(res, { token, user: formatUser(user) }, '登录成功');
 });
 
@@ -107,6 +144,7 @@ router.get('/me', auth, async (req, res) => {
 router.put('/profile', auth, async (req, res) => {
   const { nickname, email, avatar } = req.body;
   const user = req.user;
+  const before = { nickname: user.nickname, email: user.email, avatar: user.avatar };
 
   if (email && email !== user.email) {
     const emailTaken = await User.findOne({ email, _id: { $ne: user._id } });
@@ -120,6 +158,16 @@ router.put('/profile', auth, async (req, res) => {
   if (avatar !== undefined) user.avatar = avatar;
   await user.save();
   await user.populate('role');
+  await createLog(req, {
+    module: 'auth',
+    action: 'update',
+    targetId: user._id,
+    targetName: user.username,
+    detail: {
+      before,
+      after: { nickname: user.nickname, email: user.email, avatar: user.avatar },
+    },
+  });
   success(res, formatUser(user), '资料已更新');
 });
 
@@ -139,6 +187,13 @@ router.put('/password', auth, async (req, res) => {
 
   user.password = newPassword;
   await user.save();
+  await createLog(req, {
+    module: 'auth',
+    action: 'update',
+    targetId: user._id,
+    targetName: user.username,
+    detail: '修改密码',
+  });
   success(res, null, '密码修改成功');
 });
 

@@ -1,8 +1,9 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const { seed } = require('./utils/seed');
-require('dotenv').config();
+
 
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
@@ -10,6 +11,7 @@ const roleRoutes = require('./routes/roles');
 const menuRoutes = require('./routes/menus');
 const configRoutes = require('./routes/config');
 const dashboardRoutes = require('./routes/dashboard');
+const logRoutes = require('./routes/logs');
 
 const app = express();
 
@@ -26,6 +28,7 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/menus', menuRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/logs', logRoutes);
 
 async function start() {
   try {

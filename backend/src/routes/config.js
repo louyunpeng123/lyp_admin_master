@@ -2,6 +2,7 @@ const express = require('express');
 const Config = require('../models/Config');
 const { auth, checkPermission } = require('../middleware/auth');
 const { success } = require('../utils/response');
+const { createLog } = require('../utils/auditLog');
 
 const router = express.Router();
 
@@ -30,13 +31,20 @@ router.get('/', auth, checkPermission('settings:read'), async (_req, res) => {
 });
 
 router.put('/', auth, checkPermission('settings:write'), async (req, res) => {
+  const before = await getSettingsMap();
   const allowed = ['siteName', 'adminEmail', 'enableNotify', 'allowRegister'];
   for (const key of allowed) {
     if (req.body[key] !== undefined) {
       await Config.findOneAndUpdate({ key }, { value: req.body[key] }, { upsert: true });
     }
   }
-  success(res, await getSettingsMap(), '设置已保存');
+  const after = await getSettingsMap();
+  await createLog(req, {
+    module: 'config',
+    action: 'update',
+    detail: { before, after },
+  });
+  success(res, after, '设置已保存');
 });
 
 module.exports = router;

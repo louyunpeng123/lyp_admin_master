@@ -2,6 +2,7 @@ const express = require('express');
 const Menu = require('../models/Menu');
 const { auth, checkPermission } = require('../middleware/auth');
 const { success, fail } = require('../utils/response');
+const { createLog } = require('../utils/auditLog');
 
 const router = express.Router();
 
@@ -78,6 +79,13 @@ router.post('/', auth, checkPermission('menu:write'), async (req, res) => {
     permission: permission || '',
     type: type || 'menu',
   });
+  await createLog(req, {
+    module: 'menu',
+    action: 'create',
+    targetId: menu._id,
+    targetName: menu.title,
+    detail: { after: formatMenu(menu) },
+  });
   success(res, formatMenu(menu), '菜单创建成功');
 });
 
@@ -87,6 +95,7 @@ router.put('/:id', auth, checkPermission('menu:write'), async (req, res) => {
     return fail(res, '菜单不存在', 404, 404);
   }
 
+  const before = formatMenu(menu);
   const fields = ['title', 'path', 'name', 'component', 'icon', 'parentId', 'sort', 'hidden', 'permission', 'type'];
   for (const field of fields) {
     if (req.body[field] !== undefined) {
@@ -95,12 +104,26 @@ router.put('/:id', auth, checkPermission('menu:write'), async (req, res) => {
   }
 
   await menu.save();
+  await createLog(req, {
+    module: 'menu',
+    action: 'update',
+    targetId: menu._id,
+    targetName: menu.title,
+    detail: { before, after: formatMenu(menu) },
+  });
   success(res, formatMenu(menu), '菜单更新成功');
 });
 
 router.delete('/:id', auth, checkPermission('menu:write'), async (req, res) => {
   const childCount = await Menu.countDocuments({ parentId: req.params.id });
   if (childCount > 0) {
+    await createLog(req, {
+      module: 'menu',
+      action: 'delete',
+      targetId: req.params.id,
+      status: 'fail',
+      detail: '请先删除子菜单',
+    });
     return fail(res, '请先删除子菜单');
   }
 
@@ -108,6 +131,12 @@ router.delete('/:id', auth, checkPermission('menu:write'), async (req, res) => {
   if (!menu) {
     return fail(res, '菜单不存在', 404, 404);
   }
+  await createLog(req, {
+    module: 'menu',
+    action: 'delete',
+    targetId: menu._id,
+    targetName: menu.title,
+  });
   success(res, null, '菜单已删除');
 });
 

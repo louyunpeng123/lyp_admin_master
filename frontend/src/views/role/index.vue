@@ -28,6 +28,7 @@ const permissionLabels: Record<string, string> = {
   'menu:write': '管理菜单',
   'settings:read': '查看设置',
   'settings:write': '修改设置',
+  'log:read': '查看操作日志',
 }
 
 function canWrite() {
